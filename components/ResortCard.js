@@ -62,6 +62,7 @@ export default function ResortCard({ resort, parkingStatus, snowData }) {
               </span>
               <span className="text-xs ml-1" style={{ color: "var(--text-secondary)" }}>
                 new · {snowData.baseDepth}" base
+                {snowData.tempF !== null ? ` · ${snowData.tempF}°F` : ""}
               </span>
             </div>
           ) : (
@@ -69,8 +70,8 @@ export default function ResortCard({ resort, parkingStatus, snowData }) {
           )}
         </div>
 
-        {/* Lifts open row */}
-        {snowData && (
+        {/* Lifts open row — only show if we have real data */}
+        {snowData && snowData.liftsOpen !== null && (
           <div className="flex items-center justify-between">
             <span className="text-sm" style={{ color: "var(--text-secondary)" }}>Lifts Open</span>
             <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
