@@ -65,7 +65,7 @@ export default function ResortCard({ resort, parkingStatus, snowData }) {
               </span>
             </div>
           ) : (
-            <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Loading...</span>
+            <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Unavailable</span>
           )}
         </div>
 
