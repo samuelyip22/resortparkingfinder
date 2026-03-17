@@ -67,7 +67,11 @@ export default async function ResortPage({ params }) {
         className="rounded-2xl p-8 mb-8 flex items-end"
         style={{
           backgroundColor: resort.heroColor,
-          background: `linear-gradient(135deg, ${resort.heroColor} 0%, rgba(0,0,0,0.7) 100%)`,
+          backgroundImage: resort.heroImage
+            ? `linear-gradient(135deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.75) 100%), url(${resort.heroImage})`
+            : `linear-gradient(135deg, ${resort.heroColor} 0%, rgba(0,0,0,0.7) 100%)`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
           minHeight: "180px",
         }}
       >
@@ -276,43 +280,72 @@ export default async function ResortPage({ params }) {
               <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
                 Trail Map
               </h2>
-              <a
-                href={links.trailMap}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm flex items-center gap-1"
-                style={{ color: "var(--accent)" }}
-              >
-                Full map ↗
-              </a>
+              {/* Link opens the source map in a new tab */}
+              {resort.trailMapEmbed && (
+                <a
+                  href={resort.trailMapEmbed}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm flex items-center gap-1"
+                  style={{ color: "var(--accent)" }}
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Open full map
+                </a>
+              )}
             </div>
-            {/* Trail map image — placeholder until real images are added to /public/maps/ */}
-            <div
-              className="rounded-xl flex items-center justify-center"
-              style={{
-                backgroundColor: "var(--bg)",
-                border: "1px solid var(--border)",
-                minHeight: "280px",
-              }}
-            >
-              <div className="text-center">
-                <Mountain className="w-10 h-10 mx-auto mb-2" style={{ color: "var(--text-secondary)" }} />
-                <p className="text-sm" style={{ color: "var(--text-secondary)" }}>Trail map image</p>
-                <p className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>
-                  Add image to /public/maps/{resort.slug}-trail-map.jpg
-                </p>
+
+            {resort.trailMapEmbed ? (
+              resort.trailMapEmbed.match(/\.(jpg|jpeg|png|webp)/i) ? (
+                /* JPG/PNG — show as a regular image */
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={resort.trailMapEmbed}
+                  alt={`${resort.name} trail map`}
+                  className="w-full rounded-xl"
+                  style={{ border: "1px solid var(--border)" }}
+                />
+              ) : (
+                /* PDF — embed as iframe on desktop, show download button on mobile */
+                <div>
+                  {/* iframe embed — visible on md+ screens */}
+                  <iframe
+                    src={resort.trailMapEmbed}
+                    title={`${resort.name} trail map`}
+                    className="hidden md:block w-full rounded-xl"
+                    style={{ height: "500px", border: "1px solid var(--border)" }}
+                  />
+                  {/* Mobile fallback — button to open PDF */}
+                  <a
+                    href={resort.trailMapEmbed}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="md:hidden flex items-center justify-center gap-2 w-full py-10 rounded-xl text-sm font-medium"
+                    style={{ backgroundColor: "var(--bg)", border: "1px solid var(--border)", color: "var(--accent)" }}
+                  >
+                    <Mountain className="w-5 h-5" />
+                    View Trail Map PDF ↗
+                  </a>
+                </div>
+              )
+            ) : (
+              /* No embed URL yet — show link to resort website */
+              <div
+                className="rounded-xl flex items-center justify-center py-10"
+                style={{ backgroundColor: "var(--bg)", border: "1px solid var(--border)" }}
+              >
                 <a
                   href={links.trailMap}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 mt-3 text-sm"
+                  className="flex items-center gap-2 text-sm"
                   style={{ color: "var(--accent)" }}
                 >
-                  <ExternalLink className="w-3 h-3" />
-                  View on {resort.shortName} website
+                  <ExternalLink className="w-4 h-4" />
+                  View trail map on {resort.shortName} website
                 </a>
               </div>
-            </div>
+            )}
           </div>
         </div>
 

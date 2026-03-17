@@ -20,7 +20,11 @@ export default function ResortCard({ resort, parkingStatus, snowData }) {
         className="relative h-40 flex items-end p-4"
         style={{
           backgroundColor: resort.heroColor,
-          backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 100%)`,
+          backgroundImage: resort.heroImage
+            ? `linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 100%), url(${resort.heroImage})`
+            : `linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 100%)`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
         }}
       >
         {/* Pass badge: Ikon (blue) or Epic (red) */}
