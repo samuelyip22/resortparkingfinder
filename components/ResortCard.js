@@ -5,6 +5,7 @@
 import Link from "next/link"
 import { Snowflake, Car, ExternalLink, ChevronRight } from "lucide-react"
 import ParkingBadge from "./ParkingBadge"
+import DistanceBadge from "./DistanceBadge"
 
 export default function ResortCard({ resort, parkingStatus, snowData }) {
   // parkingStatus — live data from our scraper (may be null while loading)
@@ -34,6 +35,8 @@ export default function ResortCard({ resort, parkingStatus, snowData }) {
         <div>
           <h2 className="text-white text-xl font-bold leading-tight">{resort.name}</h2>
           <p className="text-white/70 text-sm">{resort.location}</p>
+          {/* Distance from user — shows only if browser location is granted */}
+          <DistanceBadge coordinates={resort.coordinates} />
         </div>
       </div>
 

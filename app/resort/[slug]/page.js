@@ -10,9 +10,10 @@ import { getParkingStatus } from "@/lib/parking"
 import ParkingBadge from "@/components/ParkingBadge"
 import WebcamSelector from "@/components/WebcamSelector"
 import ResortForecast from "@/components/ResortForecast"
+import DistanceTracker from "@/components/DistanceTracker"
 import {
   ArrowLeft, Car, Snowflake, ExternalLink, MapPin,
-  Star, Clock, Users, Utensils, Mountain, Bell
+  Star, Clock, Users, Utensils, Mountain, Bell, Info, Flame
 } from "lucide-react"
 
 // Tell Next.js which resort pages to pre-build at deploy time
@@ -98,6 +99,11 @@ export default async function ResortPage({ params }) {
         </div>
       </div>
 
+      {/* Distance from user's location — client-side, uses browser GPS */}
+      <div className="mb-6">
+        <DistanceTracker resort={resort} />
+      </div>
+
       {/* Main content grid — 2 columns on desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -129,20 +135,24 @@ export default async function ResortPage({ params }) {
                   ))}
                 </div>
 
-                {/* Lifts & trails */}
+                {/* Lifts & trails — only show if data is available */}
                 <div className="flex gap-4">
-                  <div className="flex items-center gap-2 text-sm" style={{ color: "var(--text-secondary)" }}>
-                    <span className="font-semibold text-base" style={{ color: "var(--text-primary)" }}>
-                      {snowData.liftsOpen}/{snowData.liftsTotal}
-                    </span>
-                    lifts open
-                  </div>
-                  <div className="flex items-center gap-2 text-sm" style={{ color: "var(--text-secondary)" }}>
-                    <span className="font-semibold text-base" style={{ color: "var(--text-primary)" }}>
-                      {snowData.trailsOpen}/{snowData.trailsTotal}
-                    </span>
-                    trails open
-                  </div>
+                  {snowData.liftsOpen != null && (
+                    <div className="flex items-center gap-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+                      <span className="font-semibold text-base" style={{ color: "var(--text-primary)" }}>
+                        {snowData.liftsOpen}/{snowData.liftsTotal ?? "?"}
+                      </span>
+                      lifts open
+                    </div>
+                  )}
+                  {snowData.trailsOpen != null && (
+                    <div className="flex items-center gap-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+                      <span className="font-semibold text-base" style={{ color: "var(--text-primary)" }}>
+                        {snowData.trailsOpen}/{snowData.trailsTotal ?? "?"}
+                      </span>
+                      trails open
+                    </div>
+                  )}
                   {snowData.updatedAt && (
                     <div className="ml-auto text-xs" style={{ color: "var(--text-secondary)" }}>
                       Updated {snowData.updatedAt}
@@ -162,6 +172,95 @@ export default async function ResortPage({ params }) {
           <div className="card rounded-2xl p-6">
             <ResortForecast resortSlug={resort.slug} />
           </div>
+
+          {/* About this resort — Known For + What to Expect + Steepest Run */}
+          {(resort.knownFor || resort.whatToExpect) && (
+            <div className="card rounded-2xl p-6">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+                <Info className="w-5 h-5" style={{ color: "var(--accent)" }} />
+                About {resort.shortName}
+              </h2>
+
+              {/* "Known For" tags */}
+              {resort.knownFor && (
+                <div className="mb-4">
+                  <p className="text-xs font-medium mb-2" style={{ color: "var(--text-secondary)" }}>KNOWN FOR</p>
+                  <div className="flex flex-wrap gap-2">
+                    {resort.knownFor.map((tag) => (
+                      <span
+                        key={tag}
+                        className="text-xs px-3 py-1 rounded-full font-medium"
+                        style={{ backgroundColor: "var(--accent-light)", color: "var(--accent)" }}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* What to Expect — plain-English description */}
+              {resort.whatToExpect && (
+                <p className="text-sm leading-relaxed mb-4" style={{ color: "var(--text-secondary)" }}>
+                  {resort.whatToExpect}
+                </p>
+              )}
+
+              {/* Terrain visual breakdown — beginner / intermediate / advanced bars */}
+              {resort.details?.terrain && (
+                <div className="mb-4">
+                  <p className="text-xs font-medium mb-2" style={{ color: "var(--text-secondary)" }}>TERRAIN BREAKDOWN</p>
+                  <div className="flex rounded-lg overflow-hidden h-5 text-xs font-bold">
+                    <div
+                      className="flex items-center justify-center text-white"
+                      style={{ width: resort.details.terrain.beginner, backgroundColor: "#22c55e" }}
+                      title={`Beginner: ${resort.details.terrain.beginner}`}
+                    >
+                      {parseInt(resort.details.terrain.beginner) >= 15 ? resort.details.terrain.beginner : ""}
+                    </div>
+                    <div
+                      className="flex items-center justify-center text-white"
+                      style={{ width: resort.details.terrain.intermediate, backgroundColor: "#3b82f6" }}
+                      title={`Intermediate: ${resort.details.terrain.intermediate}`}
+                    >
+                      {parseInt(resort.details.terrain.intermediate) >= 15 ? resort.details.terrain.intermediate : ""}
+                    </div>
+                    <div
+                      className="flex items-center justify-center text-white"
+                      style={{ width: resort.details.terrain.advanced, backgroundColor: "#1e1e1e" }}
+                      title={`Advanced: ${resort.details.terrain.advanced}`}
+                    >
+                      {parseInt(resort.details.terrain.advanced) >= 15 ? resort.details.terrain.advanced : ""}
+                    </div>
+                  </div>
+                  {/* Legend */}
+                  <div className="flex gap-4 mt-2 text-xs" style={{ color: "var(--text-secondary)" }}>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block bg-green-500" /> Beginner {resort.details.terrain.beginner}</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block bg-blue-500" /> Intermediate {resort.details.terrain.intermediate}</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block bg-gray-900" /> Advanced {resort.details.terrain.advanced}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Steepest run */}
+              {resort.steepestRun && (
+                <div
+                  className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm"
+                  style={{ backgroundColor: "var(--bg)", border: "1px solid var(--border)" }}
+                >
+                  <Flame className="w-4 h-4 shrink-0 text-orange-500" />
+                  <div>
+                    <span className="font-semibold" style={{ color: "var(--text-primary)" }}>
+                      Steepest run:
+                    </span>
+                    <span className="ml-1.5" style={{ color: "var(--text-secondary)" }}>
+                      {resort.steepestRun.name} — {resort.steepestRun.grade}, {resort.steepestRun.difficulty}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Webcams card */}
           <div className="card rounded-2xl p-6">
@@ -313,26 +412,6 @@ export default async function ResortPage({ params }) {
                 <span className="font-semibold" style={{ color: "var(--text-primary)" }}>
                   {details.avgAnnualSnowfall}
                 </span>
-              </div>
-
-              {/* Terrain breakdown */}
-              <div>
-                <span className="text-xs font-medium block mb-2" style={{ color: "var(--text-secondary)" }}>
-                  TERRAIN
-                </span>
-                <div className="flex gap-2 text-xs">
-                  <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-800">
-                    🟢 {details.terrain?.beginner} Beginner
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
-                    🔵 {details.terrain?.intermediate} Intermediate
-                  </span>
-                </div>
-                <div className="mt-1">
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-black/10 text-slate-700">
-                    ⚫ {details.terrain?.advanced} Advanced
-                  </span>
-                </div>
               </div>
 
               <div className="border-t" style={{ borderColor: "var(--border)" }} />
