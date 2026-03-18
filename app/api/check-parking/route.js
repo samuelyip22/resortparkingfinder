@@ -1,14 +1,15 @@
 // app/api/check-parking/route.js
-// API route: GET /api/check-parking
-// This is the parking checker — it runs every 5 minutes via Vercel Cron.
-// It ONLY checks resorts that have active alert subscriptions (keeps server load light).
+// GET /api/check-parking
+// Runs every 5 minutes via cron-job.org.
+// Checks parking status only for resorts that have active alert subscriptions.
 //
 // What it does:
 //   1. Finds all active alerts in Supabase
 //   2. For each unique resort that has alerts, checks current parking status
 //   3. Compares to the last known status stored in Supabase
-//   4. If status changed from "full/unknown" → "open", sends email alerts via Resend
-//   5. Updates the stored parking snapshot
+//   4. If status changed from "full" → "open", sends email alerts via Resend
+//      — but only if it's been at least 1 hour since the last email for that alert
+//   5. Updates parking_snapshots and parking_calendar in Supabase
 
 import { supabase } from "@/lib/supabase"
 import { getParkingStatus } from "@/lib/parking"
@@ -17,22 +18,22 @@ import { sendParkingAlert } from "@/lib/email"
 import { NextResponse } from "next/server"
 
 export async function GET(request) {
-  // Security check: Vercel Cron passes a secret header to prevent unauthorized calls.
-  // Anyone who knows the URL could trigger this without the check.
+  // Security check: the cron service passes our secret in the Authorization header.
+  // This prevents anyone who guesses the URL from triggering it.
   const authHeader = request.headers.get("authorization")
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
   // --- Step 1: Find which resorts have active alerts ---
-  // Only fetch alerts for future dates (no point checking past dates)
+  // Only check future dates — no point monitoring dates that have passed
   const today = new Date().toISOString().split("T")[0]
 
   const { data: activeAlerts, error: alertsError } = await supabase
     .from("alerts")
     .select("*")
     .eq("active", true)
-    .gte("date", today) // only dates today or in the future
+    .gte("date", today)
 
   if (alertsError) {
     console.error("Failed to fetch alerts:", alertsError)
@@ -40,7 +41,7 @@ export async function GET(request) {
   }
 
   if (!activeAlerts || activeAlerts.length === 0) {
-    // No active alerts — nothing to check, keeps the server completely idle
+    // No active alerts — nothing to check
     return NextResponse.json({ checked: 0, message: "No active alerts" })
   }
 
@@ -62,7 +63,7 @@ export async function GET(request) {
       continue
     }
 
-    // Normalize status to "open" or "full/unknown" for comparison
+    // Normalize to a simple boolean: is there parking available right now?
     const isOpen = isStatusOpen(currentStatus)
 
     // --- Step 3: Get last known status from Supabase ---
@@ -72,15 +73,29 @@ export async function GET(request) {
       .eq("resort_id", resortId)
       .single()
 
-    const wasOpen = snapshot?.was_open ?? false // default: assume it was NOT open before
+    // Default: assume it was NOT open before (so first check can trigger an email if it is open)
+    const wasOpen = snapshot?.was_open ?? false
 
     // --- Step 4: Check if status just changed from closed → open ---
     if (isOpen && !wasOpen) {
-      // Parking just opened! Find all subscribers for this resort
+      // Parking just opened! Notify all subscribers for this resort
       const subscribers = activeAlerts.filter((a) => a.resort_id === resortId)
 
       for (const alert of subscribers) {
         try {
+          // ── 1-hour throttle ──────────────────────────────────────────────
+          // Don't send another email if we already sent one in the last hour.
+          // This prevents re-spamming if parking flickers open/closed.
+          const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+          const lastNotified = alert.notified_at
+
+          if (lastNotified && lastNotified > oneHourAgo) {
+            // Already sent an email within the last hour — skip this alert
+            console.log(`Throttled email for alert ${alert.id} — last sent ${lastNotified}`)
+            continue
+          }
+          // ────────────────────────────────────────────────────────────────
+
           await sendParkingAlert({
             email: alert.email,
             resortName: resort.name,
@@ -88,10 +103,10 @@ export async function GET(request) {
             reservationUrl: resort.parking.reservationUrl || resort.links.website,
           })
 
-          // Mark this specific alert as notified (deactivate it so we don't spam)
+          // Record that we sent the email (but keep alert active so we can notify again later)
           await supabase
             .from("alerts")
-            .update({ active: false, notified_at: new Date().toISOString() })
+            .update({ notified_at: new Date().toISOString() })
             .eq("id", alert.id)
 
         } catch (emailErr) {
@@ -102,13 +117,31 @@ export async function GET(request) {
       results.push({ resort: resortId, status: "opened", notified: subscribers.length })
     }
 
-    // --- Step 5: Update the parking snapshot in Supabase ---
+    // --- Step 5: Update parking_snapshots (last known overall status) ---
     await supabase.from("parking_snapshots").upsert({
       resort_id: resortId,
       status: String(currentStatus),
       was_open: isOpen,
       checked_at: new Date().toISOString(),
-    }, { onConflict: "resort_id" }) // upsert = insert if new, update if exists
+    }, { onConflict: "resort_id" })
+
+    // --- Step 6: Update parking_calendar for each alerted date ---
+    // This populates the calendar grid shown on resort pages.
+    // We use the current overall status as a proxy for upcoming reserved dates.
+    const alertedDates = [...new Set(
+      activeAlerts
+        .filter((a) => a.resort_id === resortId && a.date >= today)
+        .map((a) => a.date)
+    )]
+
+    for (const date of alertedDates) {
+      await supabase.from("parking_calendar").upsert({
+        resort_id: resortId,
+        date: date,
+        status: isOpen ? "open" : "full",
+        checked_at: new Date().toISOString(),
+      }, { onConflict: "resort_id,date" })
+    }
   }
 
   return NextResponse.json({
@@ -119,10 +152,10 @@ export async function GET(request) {
 }
 
 // Helper: decide if a parking status counts as "open"
-// Works for both text statuses ("open") and percentage numbers (e.g. 65% full < 95% = still has spots)
+// Works for text statuses ("open") and percentage fill numbers (e.g. 65% full < 95% = still has spots)
 function isStatusOpen(status) {
   if (status === "open") return true
   if (status === "full" || status === "unknown" || status === null) return false
-  if (typeof status === "number") return status < 95 // under 95% = still has spots
+  if (typeof status === "number") return status < 95 // under 95% full = still some spots left
   return false
 }

@@ -55,3 +55,28 @@ create policy "Service role full access to alerts" on alerts
 
 create policy "Service role full access to snapshots" on parking_snapshots
   for all using (true);
+
+-- ─────────────────────────────────────────────
+-- parking_calendar
+-- Stores per-date parking availability for each resort.
+-- Populated by the check-parking cron and used to render
+-- the calendar UI on resort pages.
+-- One row per resort+date combination.
+-- ─────────────────────────────────────────────
+create table if not exists parking_calendar (
+  resort_id   text not null,
+  date        date not null,
+  status      text not null default 'unknown', -- 'open', 'full', 'unknown'
+  checked_at  timestamptz not null default now(),
+  primary key (resort_id, date)
+);
+
+alter table parking_calendar enable row level security;
+
+-- Anyone can read the calendar (it's public availability info)
+create policy "Anyone can read calendar" on parking_calendar
+  for select using (true);
+
+-- Only service role can write calendar data
+create policy "Service role full access to calendar" on parking_calendar
+  for all using (true);

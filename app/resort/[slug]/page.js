@@ -11,6 +11,7 @@ import ParkingBadge from "@/components/ParkingBadge"
 import WebcamSelector from "@/components/WebcamSelector"
 import ResortForecast from "@/components/ResortForecast"
 import DistanceTracker from "@/components/DistanceTracker"
+import ParkingCalendar from "@/components/ParkingCalendar"
 import {
   ArrowLeft, Car, Snowflake, ExternalLink, MapPin,
   Star, Clock, Users, Utensils, Mountain, Bell, Info, Flame
@@ -91,15 +92,17 @@ export default async function ResortPage({ params }) {
             </div>
           </div>
 
-          {/* Set alert CTA */}
-          <Link
-            href={`/alerts?resort=${resort.id}`}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-90"
-            style={{ backgroundColor: "var(--accent)", color: "white" }}
-          >
-            <Bell className="w-4 h-4" />
-            Set Parking Alert
-          </Link>
+          {/* Set alert CTA — shown only for non-HONK resorts (HONK resorts use the calendar) */}
+          {resort.parking.type !== "honk" && (
+            <Link
+              href={`/alerts?resort=${resort.id}`}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-90"
+              style={{ backgroundColor: "var(--accent)", color: "white" }}
+            >
+              <Bell className="w-4 h-4" />
+              Set Parking Alert
+            </Link>
+          )}
         </div>
       </div>
 
@@ -176,6 +179,13 @@ export default async function ResortPage({ params }) {
           <div className="card rounded-2xl p-6">
             <ResortForecast resortSlug={resort.slug} />
           </div>
+
+          {/* Parking Calendar — only renders for HONK (reservation) resorts */}
+          {resort.parking.type === "honk" && (
+            <div className="card rounded-2xl p-6">
+              <ParkingCalendar resort={resort} />
+            </div>
+          )}
 
           {/* About this resort — Known For + What to Expect + Steepest Run */}
           {(resort.knownFor || resort.whatToExpect) && (
