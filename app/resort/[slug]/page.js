@@ -6,8 +6,7 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { getResort, resorts } from "@/lib/resorts"
 import { getSnowData } from "@/lib/snow"
-import { getParkingStatus } from "@/lib/parking"
-import ParkingBadge from "@/components/ParkingBadge"
+import LiveParkingStatus from "@/components/LiveParkingStatus"
 import WebcamSelector from "@/components/WebcamSelector"
 import ResortForecast from "@/components/ResortForecast"
 import DistanceTracker from "@/components/DistanceTracker"
@@ -42,11 +41,9 @@ export default async function ResortPage({ params }) {
   // If someone visits /resort/fake-name, show a 404 page
   if (!resort) notFound()
 
-  // Fetch snow data and parking status for this resort
-  const [snowData, parkingStatus] = await Promise.all([
-    getSnowData(resort.snoCountryId).catch(() => null),
-    getParkingStatus(resort).catch(() => null),
-  ])
+  // Fetch snow data only — parking status is fetched client-side via LiveParkingStatus
+  // so it never runs in the background (only when someone is actively on this page)
+  const snowData = await getSnowData(resort.snoCountryId).catch(() => null)
 
   const { details, parking, links } = resort
 
@@ -371,7 +368,7 @@ export default async function ResortPage({ params }) {
 
             {/* Status badge */}
             <div className="mb-4">
-              <ParkingBadge type={parking.type} status={parkingStatus} />
+              <LiveParkingStatus resort={resort} />
             </div>
 
             {/* Lots list */}
