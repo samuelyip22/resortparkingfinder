@@ -20,9 +20,11 @@ export default function AlertsPage() {
   const [status, setStatus] = useState("idle") // "idle" | "loading" | "success" | "error"
   const [errorMsg, setErrorMsg] = useState("")
 
-  // Only show resorts that actually have a parking system to monitor
+  // Only show resorts with live parking data that can actually be monitored.
+  // HONK resorts (Brighton, Solitude, Park City) use the calendar on their own pages.
+  // Free resorts (Deer Valley) and reservation-only (Alta) can't be tracked live.
   const trackableResorts = resorts.filter((r) =>
-    ["honk", "live-meter", "live-status"].includes(r.parking.type)
+    ["live-meter", "live-status"].includes(r.parking.type)
   )
 
   // Get the selected resort object so we can show its info

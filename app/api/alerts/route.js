@@ -33,10 +33,12 @@ export async function POST(request) {
     return NextResponse.json({ error: "Resort not found." }, { status: 400 })
   }
 
-  // Make sure the resort has a trackable parking system
-  if (!["honk", "live-meter", "live-status"].includes(resort.parking.type)) {
+  // Only allow alerts for resorts we can actually monitor live.
+  // HONK resorts use the calendar on the resort page instead.
+  // Free parking (Deer Valley) and reservation-only (Alta) can't be tracked.
+  if (!["live-meter", "live-status", "honk"].includes(resort.parking.type)) {
     return NextResponse.json(
-      { error: `${resort.name} doesn't have a trackable parking system.` },
+      { error: `${resort.name} doesn't need a reservation — parking is ${resort.parking.type === "free" ? "always free" : "not trackable"}.` },
       { status: 400 }
     )
   }

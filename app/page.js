@@ -1,35 +1,29 @@
 // app/page.js
-// The home page — shows the location card and all resort cards in a clean grid.
-// Snow data and parking status are fetched server-side so the page loads fast.
+// The home page — shows the location card, resort cards, and a unified reservation calendar.
+// Snow data is fetched server-side (no API key, fast). Parking status is fetched client-side
+// per resort (only runs when someone actually visits the page).
 
 import { resorts } from "@/lib/resorts"
 import ResortCard from "@/components/ResortCard"
 import LocationCard from "@/components/LocationCard"
+import HomeCalendar from "@/components/HomeCalendar"
 import { getSnowData } from "@/lib/snow"
-import { getParkingStatus } from "@/lib/parking"
 
-// Next.js will re-run this page every 5 minutes on the server (ISR = Incremental Static Regeneration)
-// This keeps snow data reasonably fresh without hammering the APIs on every visit.
+// Next.js re-runs this page every 5 minutes on the server (ISR).
+// Snow data is the only server-side fetch here — parking is loaded client-side.
 export const revalidate = 300 // seconds
 
 export default async function HomePage() {
-  // Fetch snow data for all resorts in parallel (at the same time)
+  // Fetch snow data for all resorts in parallel
   // Promise.allSettled means if one fails, the others still load fine
   const snowResults = await Promise.allSettled(
     resorts.map((r) => getSnowData(r.snoCountryId))
   )
 
-  // Fetch parking status for all resorts in parallel
-  const parkingResults = await Promise.allSettled(
-    resorts.map((r) => getParkingStatus(r))
-  )
-
-  // Build lookup maps: { resortId -> data }
+  // Build a lookup map: { resortId -> snowData }
   const snowMap = {}
-  const parkingMap = {}
   resorts.forEach((r, i) => {
     snowMap[r.id] = snowResults[i].status === "fulfilled" ? snowResults[i].value : null
-    parkingMap[r.id] = parkingResults[i].status === "fulfilled" ? parkingResults[i].value : null
   })
 
   return (
@@ -51,19 +45,23 @@ export default async function HomePage() {
       </div>
 
       {/* Resort cards grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-10">
         {resorts.map((resort) => (
           <ResortCard
             key={resort.id}
             resort={resort}
-            parkingStatus={parkingMap[resort.id]}
             snowData={snowMap[resort.id]}
           />
         ))}
       </div>
 
+      {/* Reservation calendar — shows upcoming weekends for Brighton, Solitude, Park City */}
+      <div className="mb-10">
+        <HomeCalendar />
+      </div>
+
       {/* Footer note */}
-      <p className="mt-10 text-center text-xs" style={{ color: "var(--text-secondary)" }}>
+      <p className="mt-4 text-center text-xs" style={{ color: "var(--text-secondary)" }}>
         Parking data updated every 5 minutes. Snow data updated daily. Always verify at resort website before driving.
       </p>
     </div>

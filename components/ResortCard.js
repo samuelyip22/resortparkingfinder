@@ -4,12 +4,12 @@
 
 import Link from "next/link"
 import { Snowflake, Car, ExternalLink, ChevronRight } from "lucide-react"
-import ParkingBadge from "./ParkingBadge"
+import LiveParkingStatus from "./LiveParkingStatus"
 import DistanceBadge from "./DistanceBadge"
 
-export default function ResortCard({ resort, parkingStatus, snowData }) {
-  // parkingStatus — live data from our scraper (may be null while loading)
-  // snowData — current conditions from SnoCountry API (may be null while loading)
+export default function ResortCard({ resort, snowData }) {
+  // snowData — current conditions from snow API (may be null while loading)
+  // Parking status is fetched client-side by LiveParkingStatus — only runs when someone is on the page
 
   return (
     <div
@@ -53,7 +53,7 @@ export default function ResortCard({ resort, parkingStatus, snowData }) {
             <Car className="w-4 h-4" />
             <span>Parking</span>
           </div>
-          <ParkingBadge type={resort.parking.type} status={parkingStatus} />
+          <LiveParkingStatus resort={resort} />
         </div>
 
         {/* Snow conditions row */}

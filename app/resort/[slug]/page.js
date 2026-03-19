@@ -89,8 +89,9 @@ export default async function ResortPage({ params }) {
             </div>
           </div>
 
-          {/* Set alert CTA — shown only for non-HONK resorts (HONK resorts use the calendar) */}
-          {resort.parking.type !== "honk" && (
+          {/* Set alert CTA — only for live resorts that can actually be monitored.
+              HONK resorts use the calendar inline. Free/reservation resorts can't be tracked. */}
+          {["live-status", "live-meter"].includes(resort.parking.type) && (
             <Link
               href={`/alerts?resort=${resort.id}`}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-90"
@@ -177,9 +178,10 @@ export default async function ResortPage({ params }) {
             <ResortForecast resortSlug={resort.slug} />
           </div>
 
-          {/* Parking Calendar — only renders for HONK (reservation) resorts */}
+          {/* Parking Calendar — only renders for HONK (reservation) resorts.
+              The id="parking-calendar" lets the home page link directly to this section. */}
           {resort.parking.type === "honk" && (
-            <div className="card rounded-2xl p-6">
+            <div id="parking-calendar" className="card rounded-2xl p-6">
               <ParkingCalendar resort={resort} />
             </div>
           )}
