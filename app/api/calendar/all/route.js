@@ -23,19 +23,20 @@ export async function GET() {
     .lte("date", endOfSeason)
     .order("date", { ascending: true })
 
+  // Always return resort metadata even if the DB query fails.
+  // The calendar will render with gray (unchecked) cells until the table is set up.
+  const resortMeta = honkResorts.map((r) => ({
+    id: r.id,
+    name: r.name,
+    shortName: r.shortName,
+    slug: r.slug,
+  }))
+
   if (error) {
     console.error("Calendar/all fetch error:", error)
-    return NextResponse.json({ error: "Failed to load calendar" }, { status: 500 })
+    // Return structure with empty entries so the calendar still renders (all gray)
+    return NextResponse.json({ resorts: resortMeta, entries: [] })
   }
 
-  // Return both the entries and the resort metadata so the UI can label columns
-  return NextResponse.json({
-    resorts: honkResorts.map((r) => ({
-      id: r.id,
-      name: r.name,
-      shortName: r.shortName,
-      slug: r.slug,
-    })),
-    entries: data || [],
-  })
+  return NextResponse.json({ resorts: resortMeta, entries: data || [] })
 }

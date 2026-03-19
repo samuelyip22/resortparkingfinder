@@ -60,7 +60,8 @@ export default function HomeCalendar() {
     )
   }
 
-  if (!data) return null
+  // If data failed to load or API returned an error, silently hide the section
+  if (!data || !data.resorts || data.error) return null
 
   const weekendDates = getUpcomingWeekendDates(8)
 

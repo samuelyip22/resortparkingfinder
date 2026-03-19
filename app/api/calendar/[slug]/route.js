@@ -28,8 +28,9 @@ export async function GET(request, { params }) {
     .order("date", { ascending: true })
 
   if (error) {
+    // Return empty entries so the calendar still renders (all gray) even if DB table missing
     console.error("Calendar fetch error:", error)
-    return NextResponse.json({ error: "Failed to load calendar" }, { status: 500 })
+    return NextResponse.json({ entries: [] })
   }
 
   return NextResponse.json({ entries: data || [] })
