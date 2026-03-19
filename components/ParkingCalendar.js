@@ -5,8 +5,8 @@
 // Clicking a red date reveals an inline alert signup form.
 // Only shown for resorts that use a reservation system (HONK).
 
-import { useState, useEffect } from "react"
-import { Bell, CheckCircle, Loader2 } from "lucide-react"
+import { useState, useEffect, useCallback } from "react"
+import { Bell, CheckCircle, Loader2, RefreshCw } from "lucide-react"
 
 // Short day-of-week headers for the grid
 const DAY_HEADERS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -27,23 +27,23 @@ export default function ParkingCalendar({ resort }) {
   // Only show the calendar for HONK (reservation-based) resorts
   if (resort.parking.type !== "honk") return null
 
-  // ── Fetch calendar data from our API on mount ──────────────────────────────
-  useEffect(() => {
+  // ── Fetch calendar data — called on mount and when Refresh is clicked ────────
+  const fetchCalendar = useCallback(() => {
+    setLoadingCalendar(true)
     fetch(`/api/calendar/${resort.slug}`)
       .then((r) => r.json())
       .then((data) => {
-        // Convert the array of { date, status } into a lookup map
         const map = {}
         for (const entry of data.entries || []) {
           map[entry.date] = entry.status
         }
         setCalendarData(map)
       })
-      .catch(() => {
-        // Silently fail — calendar just shows all-gray if data unavailable
-      })
+      .catch(() => {}) // Silently fail — calendar shows all-gray if unavailable
       .finally(() => setLoadingCalendar(false))
   }, [resort.slug])
+
+  useEffect(() => { fetchCalendar() }, [fetchCalendar])
 
   // ── Date helpers ───────────────────────────────────────────────────────────
 
@@ -91,12 +91,21 @@ export default function ParkingCalendar({ resort }) {
   return (
     <div>
       {/* Section header */}
-      <h2
-        className="text-lg font-semibold mb-1"
-        style={{ color: "var(--text-primary)" }}
-      >
-        Parking Calendar
-      </h2>
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+          Parking Calendar
+        </h2>
+        <button
+          onClick={fetchCalendar}
+          disabled={loadingCalendar}
+          className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg transition-opacity hover:opacity-80 disabled:opacity-50"
+          style={{ backgroundColor: "var(--bg)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
+          title="Refresh calendar"
+        >
+          <RefreshCw className={`w-3 h-3 ${loadingCalendar ? "animate-spin" : ""}`} />
+          Refresh
+        </button>
+      </div>
       <p className="text-sm mb-4" style={{ color: "var(--text-secondary)" }}>
         Click a{" "}
         <span className="font-medium text-red-600">red date</span> to get

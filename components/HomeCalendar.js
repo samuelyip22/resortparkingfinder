@@ -5,21 +5,24 @@
 // Each cell is color-coded: red = full, green = available, gray = not checked.
 // Clicking a full cell takes you to that resort's page to set an alert.
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
-import { Loader2, Calendar } from "lucide-react"
+import { Loader2, Calendar, RefreshCw } from "lucide-react"
 
 export default function HomeCalendar() {
   const [data, setData] = useState(null) // { resorts: [...], entries: [...] }
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
+    setLoading(true)
     fetch("/api/calendar/all")
       .then((r) => r.json())
       .then((d) => setData(d))
       .catch(() => setData(null))
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
 
   // Build a list of upcoming weekend dates (Sat + Sun) for the next 8 weekends
   function getUpcomingWeekendDates(count = 8) {
@@ -97,9 +100,21 @@ export default function HomeCalendar() {
             Reservation Calendar
           </h2>
         </div>
-        <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
-          Brighton · Solitude · Park City
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+            Brighton · Solitude · Park City
+          </p>
+          <button
+            onClick={fetchData}
+            disabled={loading}
+            className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg transition-opacity hover:opacity-80 disabled:opacity-50"
+            style={{ backgroundColor: "var(--bg)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
+            title="Refresh calendar"
+          >
+            <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        </div>
       </div>
       <p className="text-sm mb-5" style={{ color: "var(--text-secondary)" }}>
         Upcoming weekend availability for reserved parking. Click a{" "}
