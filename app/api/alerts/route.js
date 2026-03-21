@@ -6,6 +6,8 @@
 import { supabase } from "@/lib/supabase"
 import { resorts } from "@/lib/resorts"
 import { NextResponse } from "next/server"
+import { getParkingStatus } from "@/lib/parking"
+import { getResort } from "@/lib/resorts"
 
 export async function POST(request) {
   // Parse the JSON body sent from the alerts form
@@ -72,6 +74,38 @@ export async function POST(request) {
     }
     console.error("Supabase insert error:", error)
     return NextResponse.json({ error: "Failed to save alert. Please try again." }, { status: 500 })
+  }
+
+  // Immediately seed parking_calendar so the color shows before the cron runs.
+  // We mark as "full" right away (user can only set alerts for full dates),
+  // then kick off a live HONK check in the background to confirm.
+  const fullResort = getResort(resortId)
+  if (fullResort) {
+    // Mark as full immediately for instant calendar feedback
+    await supabase.from("parking_calendar").upsert({
+      resort_id: resortId,
+      date,
+      status: "full",
+      checked_at: new Date().toISOString(),
+    }, { onConflict: "resort_id,date" })
+
+    // For HONK resorts, also do a live check right now to get the real status.
+    // We don't await this — it runs after the response is sent so the user
+    // doesn't wait for the scrape. The calendar will update on next Refresh.
+    if (fullResort.parking.type === "honk") {
+      getParkingStatus(fullResort, date)
+        .then((liveStatus) => {
+          if (liveStatus !== null) {
+            supabase.from("parking_calendar").upsert({
+              resort_id: resortId,
+              date,
+              status: liveStatus,
+              checked_at: new Date().toISOString(),
+            }, { onConflict: "resort_id,date" }).catch(console.error)
+          }
+        })
+        .catch(console.error)
+    }
   }
 
   return NextResponse.json({ success: true })

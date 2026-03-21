@@ -56,6 +56,10 @@ create policy "Service role full access to alerts" on alerts
 create policy "Service role full access to snapshots" on parking_snapshots
   for all using (true);
 
+-- Track how many times in a row a scraper has returned null.
+-- If this hits 3+, the check-parking cron logs a visible health warning.
+alter table parking_snapshots add column if not exists consecutive_failures integer not null default 0;
+
 -- ─────────────────────────────────────────────
 -- parking_calendar
 -- Stores per-date parking availability for each resort.

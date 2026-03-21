@@ -11,6 +11,7 @@ import WebcamSelector from "@/components/WebcamSelector"
 import ResortForecast from "@/components/ResortForecast"
 import DistanceTracker from "@/components/DistanceTracker"
 import ParkingCalendar from "@/components/ParkingCalendar"
+import ResortStatusBar from "@/components/ResortStatusBar"
 import {
   ArrowLeft, Car, Snowflake, ExternalLink, MapPin,
   Star, Clock, Users, Utensils, Mountain, Bell, Info, Flame
@@ -108,6 +109,9 @@ export default async function ResortPage({ params }) {
       <div className="mb-6">
         <DistanceTracker resort={resort} />
       </div>
+
+      {/* Resort Status bar — base depth, 48h snow, open lifts */}
+      <ResortStatusBar snowData={snowData} />
 
       {/* Main content grid — 2 columns on desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
